@@ -23,13 +23,13 @@ public class BasePerformanceTest {
     File reportDir = new File(REPORT_DIR);
     File jtlFile = new File(new File(JTL_DIR), JTL_FILE);
 
-    if (jtlFile.exists()) {
-      // Clean report directory to avoid "folder is not empty" error
-      if (reportDir.exists()) {
-        deleteDirectory(reportDir.toPath());
-      }
-      reportDir.mkdirs();
+    // Clean report directory to avoid "folder is not empty" error
+    if (reportDir.exists()) {
+      deleteDirectory(reportDir.toPath());
+    }
+    reportDir.mkdirs();
 
+    if (jtlFile.exists()) {
       // 1. Generate dynamic dashboard
       JMeterUtils.setProperty(JMeter.JMETER_REPORT_OUTPUT_DIR_PROPERTY, reportDir.getAbsolutePath());
       new ReportGenerator(jtlFile.getPath(), null).generate();
