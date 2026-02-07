@@ -9,7 +9,7 @@ import java.io.IOException;
 import static us.abstracta.jmeter.javadsl.JmeterDsl.*;
 
 
-public class PerformanceIT extends BasePerformanceTest {
+public class PerformanceTest extends BasePerformanceTest {
 
   @Test
   public void testOpenPage() throws IOException {
