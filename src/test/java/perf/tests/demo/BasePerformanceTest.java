@@ -35,7 +35,7 @@ public class BasePerformanceTest {
       new ReportGenerator(jtlFile.getPath(), null).generate();
 
       // 2. Generate single static HTML report
-      HtmlReportGenerator.generate(jtlFile, reportDir);
+      HtmlReportGenerator.generate(reportDir);
     } else {
       System.out.println("Report generation skipped: JTL file not found at " + jtlFile.getAbsolutePath());
     }

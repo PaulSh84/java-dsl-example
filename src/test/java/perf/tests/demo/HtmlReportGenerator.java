@@ -11,8 +11,8 @@ public class HtmlReportGenerator {
 
   private static final String TEMPLATE_RESOURCE = "report-template.html";
 
-  public static void generate(File jtlFile, File outputDir) throws IOException {
-    // We don't need jtl file anymore, we use the generated statistics.json
+  public static void generate(File outputDir) throws IOException {
+    // We use the generated statistics.json
     File statsJson = new File(outputDir, "statistics.json");
     
     if (!statsJson.exists()) {
