@@ -45,7 +45,11 @@ public class BasePerformanceTest {
     try (Stream<Path> walk = Files.walk(path)) {
       walk.sorted(Comparator.reverseOrder())
           .map(Path::toFile)
-          .forEach(File::delete);
+          .forEach(file -> {
+            if (!file.delete()) {
+              System.err.println("Failed to delete file: " + file.getAbsolutePath());
+            }
+          });
     }
   }
 }
