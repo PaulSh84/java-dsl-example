@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JMeter Dashboard</title>
+    <style>
+        body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.42857143; color: #333; background-color: #fff; margin: 0; padding: 20px; }
+        h1, h2, h3 { margin-top: 20px; margin-bottom: 10px; }
+        h1 { font-size: 36px; border-bottom: 1px solid #eee; padding-bottom: 9px; }
+        h2 { font-size: 30px; }
+        h3 { font-size: 24px; }
+
+        .dashboard-header { margin-bottom: 20px; }
+        .dashboard-header table { width: 100%; }
+        .dashboard-header td { padding: 5px; }
+
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; border: 1px solid #ddd; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f5f5f5; }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .success { color: #3c763d; }
+        .failure { color: #a94442; }
+        .warning { color: #8a6d3b; }
+
+        .panel { margin-bottom: 20px; background-color: #fff; border: 1px solid transparent; border-radius: 4px; box-shadow: 0 1px 1px rgba(0,0,0,.05); border-color: #ddd; }
+        .panel-heading { color: #333; background-color: #f5f5f5; border-color: #ddd; padding: 10px 15px; border-bottom: 1px solid transparent; border-top-left-radius: 3px; border-top-right-radius: 3px; }
+        .panel-body { padding: 15px; }
+
+        .tile-container { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .tile { flex: 1; text-align: center; padding: 20px; margin: 0 10px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9; }
+        .tile h2 { margin: 0; font-size: 40px; }
+        .tile p { margin: 0; color: #777; }
+        .tile.ok h2 { color: #3c763d; }
+        .tile.ko h2 { color: #a94442; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <h1>JMeter Dashboard</h1>
+        <table>
+            <tr>
+                <td><strong>Report Generated:</strong> <span id="reportTime"></span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="tile-container">
+        <div class="tile ok">
+            <h2 id="okPercent"></h2>
+            <p>Pass: <span id="okPercentLabel"></span>%</p>
+        </div>
+        <div class="tile ko">
+            <h2 id="koPercent"></h2>
+            <p>Fail: <span id="koPercentLabel"></span>%</p>
+        </div>
+        <div class="tile">
+            <h2 id="avgResponseTime"></h2>
+            <p>Average Response Time</p>
+        </div>
+        <div class="tile">
+            <h2 id="throughput"></h2>
+            <p>Transactions/s</p>
+        </div>
+    </div>
+
+    <div class="panel" id="apdexPanel">
+        <div class="panel-heading"><h3>APDEX (Application Performance Index)</h3></div>
+        <div class="panel-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th class="text-center">Apdex</th>
+                        <th class="text-center">T (Toleration threshold)</th>
+                        <th class="text-center">F (Frustration threshold)</th>
+                    </tr>
+                </thead>
+                <tbody id="apdexBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-heading"><h3>Requests Summary</h3></div>
+        <div class="panel-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th class="text-center"># Samples</th>
+                        <th class="text-center">Fail</th>
+                        <th class="text-center">Error %</th>
+                    </tr>
+                </thead>
+                <tbody id="summaryBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-heading"><h3>Statistics</h3></div>
+        <div class="panel-body">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th class="text-right"># Samples</th>
+                        <th class="text-right">Fail</th>
+                        <th class="text-right">Error %</th>
+                        <th class="text-right">Average</th>
+                        <th class="text-right">Min</th>
+                        <th class="text-right">Max</th>
+                        <th class="text-right">Median</th>
+                        <th class="text-right">90th pct</th>
+                        <th class="text-right">95th pct</th>
+                        <th class="text-right">99th pct</th>
+                        <th class="text-right">Transactions/s</th>
+                        <th class="text-right">Received KB/sec</th>
+                        <th class="text-right">Sent KB/sec</th>
+                    </tr>
+                </thead>
+                <tbody id="statsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Placeholder for injected data
+        var statsData = {{DASHBOARD_DATA}};
+
+        function render() {
+            if (!statsData) return;
+
+            var items = Object.values(statsData);
+            var overall = statsData.Total;
+
+            document.getElementById('reportTime').textContent = new Date().toLocaleString();
+
+            var fmt = (n, d) => n != null ? n.toFixed(d) : '-';
+
+            if (overall) {
+                var okPct = 100 - overall.errorPct;
+                document.getElementById('okPercent').textContent = fmt(okPct, 2) + '%';
+                document.getElementById('okPercentLabel').textContent = fmt(okPct, 2);
+                document.getElementById('koPercent').textContent = fmt(overall.errorPct, 2) + '%';
+                document.getElementById('koPercentLabel').textContent = fmt(overall.errorPct, 2);
+                document.getElementById('avgResponseTime').textContent = fmt(overall.meanResTime, 0) + ' ms';
+                document.getElementById('throughput').textContent = fmt(overall.throughput, 2);
+            }
+
+            // Check if any item has APDEX data
+            var hasApdex = items.some(d => d.transaction !== 'Total' && d.apdex != null);
+            if (!hasApdex) {
+                document.getElementById('apdexPanel').style.display = 'none';
+            }
+
+            // Populate Tables
+            var apdexBody = document.getElementById('apdexBody');
+            var summaryBody = document.getElementById('summaryBody');
+            var statsBody = document.getElementById('statsBody');
+
+            items.sort((a, b) => {
+                if (a.transaction === 'Total') return -1; // Total first
+                if (b.transaction === 'Total') return 1;
+                return a.transaction.localeCompare(b.transaction);
+            });
+
+            items.forEach(d => {
+                var label = d.transaction;
+
+                // APDEX (Exclude Total)
+                if (hasApdex && label !== 'Total') {
+                    var tr = document.createElement('tr');
+                    var apdexVal = (d.apdex != null) ? fmt(d.apdex, 3) : '-';
+                    tr.innerHTML = `
+                        <td>${label}</td>
+                        <td class="text-center">${apdexVal}</td>
+                        <td class="text-center">${d.apdexT || 500} ms</td>
+                        <td class="text-center">${d.apdexF || 1500} ms</td>
+                    `;
+                    apdexBody.appendChild(tr);
+                }
+
+                // Summary
+                var trSum = document.createElement('tr');
+                trSum.innerHTML = `
+                    <td>${label}</td>
+                    <td class="text-center">${d.sampleCount}</td>
+                    <td class="text-center">${d.errorCount}</td>
+                    <td class="text-center">${fmt(d.errorPct, 2)}%</td>
+                `;
+                summaryBody.appendChild(trSum);
+
+                // Stats
+                var trStat = document.createElement('tr');
+                trStat.innerHTML = `
+                    <td>${label}</td>
+                    <td class="text-right">${d.sampleCount}</td>
+                    <td class="text-right">${d.errorCount}</td>
+                    <td class="text-right">${fmt(d.errorPct, 2)}%</td>
+                    <td class="text-right">${fmt(d.meanResTime, 2)}</td>
+                    <td class="text-right">${d.minResTime}</td>
+                    <td class="text-right">${d.maxResTime}</td>
+                    <td class="text-right">${fmt(d.medianResTime, 2)}</td>
+                    <td class="text-right">${fmt(d.pct1ResTime, 2)}</td>
+                    <td class="text-right">${fmt(d.pct2ResTime, 2)}</td>
+                    <td class="text-right">${fmt(d.pct3ResTime, 2)}</td>
+                    <td class="text-right">${fmt(d.throughput, 2)}</td>
+                    <td class="text-right">${fmt(d.receivedKBytesPerSec, 2)}</td>
+                    <td class="text-right">${fmt(d.sentKBytesPerSec, 2)}</td>
+                `;
+                statsBody.appendChild(trStat);
+            });
+        }
+
+        render();
+    </script>
+</body>
+</html>
